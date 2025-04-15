@@ -7,7 +7,7 @@
 
 import Alamofire
 
-public struct BaseRequestModel {
+open class BaseRequestModel {
     public let baseURL: String
     public let path: String
     public let method: HTTPMethod
