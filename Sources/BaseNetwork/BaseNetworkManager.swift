@@ -12,10 +12,8 @@ public class BaseNetworkManager: BaseNetworkDelegate {
 
     private let session: Session
 
-    public init() {
-        let configuration = URLSessionConfiguration.default
-        configuration.httpAdditionalHeaders = nil // Fazla header'ları engelle
-        self.session = Session(configuration: configuration)
+    public init(session: Session = .default) {
+        self.session = session
     }
 }
 
@@ -49,6 +47,9 @@ public extension BaseNetworkManager {
                 let decoded = try JSONDecoder().decode(T.self, from: data)
                 completion(.success(decoded))
             } catch {
+                print("❌ Decode hatası: \(error)")
+                let raw = String(data: data, encoding: .utf8) ?? "Yok"
+                print("📦 Gelen veri:\n\(raw)")
                 completion(.failure(.decoding))
             }
         case .failure:
