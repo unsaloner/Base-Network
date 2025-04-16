@@ -9,11 +9,13 @@ import Alamofire
 import Foundation
 
 public class BaseNetworkManager: BaseNetworkDelegate {
-    
+
     private let session: Session
-    
-    public init(session: Session = .default) {
-        self.session = session
+
+    public init() {
+        let configuration = URLSessionConfiguration.default
+        configuration.httpAdditionalHeaders = nil // Fazla header'ları engelle
+        self.session = Session(configuration: configuration)
     }
 }
 
@@ -22,7 +24,10 @@ public extension BaseNetworkManager {
     func request<T: Decodable>(requestModel: BaseRequestModel,
                                responseType: T.Type,
                                completion: @escaping (Result<T, BaseNetworkError>) -> Void) {
+
         let urlString = requestModel.baseURL + requestModel.path
+
+        logRequest(url: urlString, requestModel: requestModel)
 
         session.request(urlString,
                         method: requestModel.method,
@@ -31,12 +36,13 @@ public extension BaseNetworkManager {
                         headers: requestModel.headers)
         .validate()
         .responseData { response in
+            self.logResponse(response)
             self.parseResponse(response, completion: completion)
         }
     }
 
     func parseResponse<T: Decodable>(_ response: AFDataResponse<Data>,
-                                             completion: @escaping (Result<T, BaseNetworkError>) -> Void) {
+                                     completion: @escaping (Result<T, BaseNetworkError>) -> Void) {
         switch response.result {
         case .success(let data):
             do {
@@ -50,5 +56,28 @@ public extension BaseNetworkManager {
             let message = HTTPURLResponse.localizedString(forStatusCode: code ?? 500)
             completion(.failure(BaseNetworkError(message: message, code: code)))
         }
+    }
+
+    private func logRequest(url: String, requestModel: BaseRequestModel) {
+        print("""
+        🔹 [NETWORK REQUEST]
+        ▶️ URL: \(url)
+        ▶️ Method: \(requestModel.method.rawValue)
+        ▶️ Headers: \(requestModel.headers?.dictionary ?? [:])
+        ▶️ Parameters: \(requestModel.parameters ?? [:])
+        """)
+    }
+
+    private func logResponse(_ response: AFDataResponse<Data>) {
+        let status = response.response?.statusCode ?? -1
+        let url = response.request?.url?.absoluteString ?? "N/A"
+        let dataString = String(data: response.data ?? Data(), encoding: .utf8) ?? "empty"
+
+        print("""
+        🔸 [NETWORK RESPONSE]
+        ✅ Status: \(status)
+        ✅ URL: \(url)
+        ✅ Response Body: \(dataString)
+        """)
     }
 }
